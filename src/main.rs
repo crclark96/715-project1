@@ -9,11 +9,11 @@ use arduino_uno::hal::port::mode::Output;
 const DOT_MS: u16 = 200;
 const DASH_MS: u16 = DOT_MS * 3;
 const CODES: [&str; 36] = [
-                            "01","1000","1010","100","0","0010","110","0000",
-                            "00","0111","101","0100","11","10","111","0110",
-                            "1101","010","000","1","001","0001","011","1001",
-                            "1011","1100","11111","01111","00111","00011",
-                            "00001","00000","10000","11000","11100","11110"
+                            ".-","-...","-.-.","-..",".","..-.","--.","....",
+                            "..",".---","-.-",".-..","--","-.","---",".--.",
+                            "--.-",".-.","...","-","..-","...-",".--","-..-",
+                            "-.--","--..","-----",".----","..---","...--",
+                            "....-",".....","-....","--...","---..","----."
                            ];
 
 #[arduino_uno::entry]
@@ -37,10 +37,24 @@ fn main() -> ! {
     ufmt::uwriteln!(&mut serial, "Hello from Arduino!\r").void_unwrap();
 
     loop {
-        // let b = nb::block!(serial.read()).void_unwrap();
+        let b = nb::block!(serial.read()).void_unwrap();
+        let code = if b <= 122 && b >= 97 {
+            // lowercase letters
+            CODES[(b - 97) as usize]
+        } else if b <= 90 && b >= 65 {
+            // uppercase letters
+            CODES[(b - 65) as usize]
+        } else if b <= 57 && b >= 48 {
+            // numbers
+            CODES[(b - 48 + 26) as usize]
+        } else {
+            // invalid -- escape loop
+            ufmt::uwriteln!(&mut serial, "Goodbye.\r").void_unwrap();
+            panic!();
+        };
 
-        // ufmt::uwriteln!(&mut serial, "Got {}!\r", b).void_unwrap();
-        blink(&mut led, "0110");
+        ufmt::uwriteln!(&mut serial, "Got {}, blinking {}\r", b as char, code).void_unwrap();
+        blink(&mut led, code);
     }
 }
 
@@ -49,8 +63,8 @@ fn blink(led: &mut PB5<Output>, code: &str) {
     for i in code.chars() {
         led.set_high().void_unwrap();
         match i {
-            '0' => arduino_uno::delay_ms(DOT_MS),
-            '1' => arduino_uno::delay_ms(DASH_MS),
+            '.' => arduino_uno::delay_ms(DOT_MS),
+            '-' => arduino_uno::delay_ms(DASH_MS),
             _ => (),
         }
         led.set_low().void_unwrap();

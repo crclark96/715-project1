@@ -17,9 +17,20 @@ fn main() -> ! {
     );
 
     let mut led = pins.d13.into_output(&mut pins.ddr);
+    let mut serial = arduino_uno::Serial::new(
+        peripherals.USART0,
+        pins.d0,
+        pins.d1.into_output(&mut pins.ddr),
+        57600.into_baudrate(),
+    );
+
+    ufmt::uwriteln!(&mut serial, "Hello from Arduino!\r").void_unwrap();
 
     loop {
         stutter_blink(&mut led, 25);
+        let b = nb::block!(serial.read()).void_unwrap();
+
+        ufmt::uwriteln!(&mut serial, "Got {}!\r", b).void_unwrap();
     }
 }
 
